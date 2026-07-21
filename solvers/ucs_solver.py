@@ -1,26 +1,22 @@
 import heapq
 import itertools
-from typing import List, Tuple, Optional
-from core.state import State, successors
+from typing import Tuple, Optional, List
+from core.state import State, successors, Board
 
 
 def move_cost(new_state: State) -> int:
     """Thiết kế hàm chi phí:
     - Nếu sau bước di chuyển block ở trạng thái `STANDING` thì chi phí = 1.
     - Nếu ở `LYING_H` hoặc `LYING_V` thì chi phí = 2.
-
-    Lý giải: trạng thái nằm (lying) chạm hai ô cùng lúc (diện tích lớn hơn),
-    nên xem là tốn công hơn -> gán chi phí 2. Trạng thái đứng chiếm một ô nên chi phí 1.
-    Việc này tạo chi phí không đồng nhất để UCS có thể khác với BFS.
     """
     if new_state.orientation == 'STANDING':
         return 1
     return 2
 
 
-def solve(grid: List[List[int]], start_r: int, start_c: int) -> Tuple[Optional[List[str]], int]:
-    start = State(start_r, start_c, 'STANDING')
-    pq = []  # (cost, counter, state)
+def solve(board: Board, start_r: int, start_c: int) -> Tuple[Optional[List[str]], int]:
+    start = State(start_r, start_c, 'STANDING', board.initial_open_bridges)
+    pq = []
     counter = itertools.count()
     heapq.heappush(pq, (0, next(counter), start))
     dist = {start: 0}
@@ -33,7 +29,7 @@ def solve(grid: List[List[int]], start_r: int, start_c: int) -> Tuple[Optional[L
         if cost != dist.get(cur, float('inf')):
             continue
         nodes_expanded += 1
-        for action, nxt, status in successors(cur, grid):
+        for action, nxt, status in successors(cur, board):
             step = move_cost(nxt)
             new_cost = cost + step
             if nxt not in dist or new_cost < dist[nxt]:
@@ -41,8 +37,6 @@ def solve(grid: List[List[int]], start_r: int, start_c: int) -> Tuple[Optional[L
                 parent[nxt] = cur
                 parent_action[nxt] = action
                 if status == 'WIN':
-                    # reconstruct path
-                    # xây dựng lại đường đi
                     path = [action]
                     p = cur
                     while parent[p] is not None:
