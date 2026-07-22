@@ -66,7 +66,7 @@ def build_level(path):
 
     center_x = len(matrix[0]) / 2.0
     center_z = len(matrix) / 2.0
-    camera.position = (center_x, 14, center_z - 12)
+    camera.position = (center_x, 18, center_z - 16)
     camera.look_at((center_x, 0, center_z))
 
     fragile_cells = []
@@ -281,15 +281,25 @@ def update():
         delay_timer -= time.dt
         if delay_timer <= 0:
             if game.fall_void_cell is not None:
-                game.orientation = 'STANDING'
-                game.r, game.c = game.fall_void_cell
-                update_block_visuals()
+                if game.split_mode:
+                    idx = game.active_cube_index
+                    if 0 <= idx < len(game.cubes):
+                        game.cubes[idx]['r'], game.cubes[idx]['c'] = game.fall_void_cell
+                    update_block_visuals()
+                else:
+                    game.orientation = 'STANDING'
+                    game.r, game.c = game.fall_void_cell
+                    update_block_visuals()
             is_falling = True
             fall_speed = 0.0
 
     if is_falling:
         fall_speed += 18.0 * time.dt
-        block.y -= fall_speed * time.dt
+        if game.split_mode:
+            cube_a.y -= fall_speed * time.dt
+            cube_b.y -= fall_speed * time.dt
+        else:
+            block.y -= fall_speed * time.dt
 
     if is_solving and not game_over:
         solve_step_timer -= time.dt
@@ -297,16 +307,20 @@ def update():
             solve_step_timer = SOLVE_STEP_INTERVAL
             if solve_queue:
                 action = solve_queue.pop(0)
-                status = game.move(action)
+                if action == 'SWITCH_CUBE':
+                    game.switch_active_cube()
+                    status = 'CONTINUE'       
+                else:
+                    status = game.move(action)
                 update_block_visuals()
                 refresh_bridge_colors()
                 break_fragile_if_needed(status)
                 if status == "WIN":
-                    status_text.text = "<green>CHIẾN THẮNG! Khối đã lọt vào hố!"
+                    status_text.text = "<green>YOU WIN!"
                     globals()['game_over'] = True
                     is_solving = False
                 elif status == "LOSE_FALL":
-                    status_text.text = "<red>GAME OVER! Bấm R để chơi lại"
+                    status_text.text = "<red>GAME OVER! Bấm R để chơi lại (Bạn gà vãi đạn)"
                     globals()['game_over'] = True
                     is_solving = False
                     delay_timer = 0.25
@@ -348,10 +362,10 @@ def input(key):
     break_fragile_if_needed(status)
 
     if status == "WIN":
-        status_text.text = "<green>CHIẾN THẮNG! Khối đã lọt vào hố!"
+        status_text.text = "<green>YOU WIN!"
         game_over = True
     elif status == "LOSE_FALL":
-        status_text.text = "<red>GAME OVER! Bấm R để chơi lại"
+        status_text.text = "<red>GAME OVER! Bấm R để chơi lại (Bạn gà vãi đạn)"
         game_over = True
         delay_timer = 0.25
     else:

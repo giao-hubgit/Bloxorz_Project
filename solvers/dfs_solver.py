@@ -19,7 +19,6 @@ def depth_limited_dfs(board: Board, start: State, limit: int):
                 continue
             visited.add(nxt)
             res = dfs(nxt, depth - 1, visited)
-            visited.remove(nxt)
             if res is not None:
                 return [action] + res
         return None
@@ -29,7 +28,6 @@ def depth_limited_dfs(board: Board, start: State, limit: int):
 
 
 def ids(board: Board, start_r: int, start_c: int, max_depth: int = 200) -> Tuple[Optional[List[str]], int]:
-    """DFS tăng dần (IDS). Dùng tập `visited` trong mỗi lần tìm có giới hạn độ sâu."""
     start = State(start_r, start_c, 'STANDING', board.initial_open_bridges)
     total_nodes = 0
     for depth in range(1, max_depth + 1):

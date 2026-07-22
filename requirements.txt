@@ -1,0 +1,2 @@
+# Game Engine 3D để chạy Bloxorz
+ursina>=5.0.0

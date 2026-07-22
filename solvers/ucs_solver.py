@@ -5,10 +5,6 @@ from core.state import State, successors, Board
 
 
 def move_cost(new_state: State) -> int:
-    """Thiết kế hàm chi phí:
-    - Nếu sau bước di chuyển block ở trạng thái `STANDING` thì chi phí = 1.
-    - Nếu ở `LYING_H` hoặc `LYING_V` thì chi phí = 2.
-    """
     if new_state.orientation == 'STANDING':
         return 1
     return 2
