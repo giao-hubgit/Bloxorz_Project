@@ -15,6 +15,8 @@ def depth_limited_dfs(board: Board, start: State, limit: int):
                 continue
             if status == 'WIN':
                 return [action]
+            if status != 'CONTINUE':
+                continue
             visited.add(nxt)
             res = dfs(nxt, depth - 1, visited)
             visited.remove(nxt)

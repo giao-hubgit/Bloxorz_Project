@@ -1,14 +1,5 @@
-"""
-core/bloxorz_core.py
-
-Core mechanic dùng cho GUI (Ursina) — bản mutable, song song với state.py
-(bản immutable dùng cho solver). Hai file phải LUÔN đồng bộ luật chơi.
-
-Mở rộng: fragile tile, bridge, soft switch, heavy switch.
-"""
 
 from core.state import VOID, FLOOR, GOAL, FRAGILE, BRIDGE, SOFT_SWITCH, HEAVY_SWITCH, SPLIT_SWITCH
-
 
 class BloxorzCore:
     def __init__(self, grid, start_r, start_c, switches=None, bridge_groups=None,
@@ -21,21 +12,17 @@ class BloxorzCore:
         self.orientation = 'STANDING'
         self.fall_void_cell = None
 
-        # Advanced tiles
-        self.switches = switches or []                 # list of dict-like Switch
-        self.bridge_groups = bridge_groups or {}        # group_name -> tuple of (r,c)
+        self.switches = switches or []
+        self.bridge_groups = bridge_groups or {}
         self.open_bridges = set(initial_open_bridges or set())
 
-        # Sự kiện switch mới kích hoạt ở lần move gần nhất — GUI dùng để
-        # phát hiệu ứng (đổi màu cầu, âm thanh...) nếu muốn.
         self.last_triggered_switches = []
 
-        # --- Split switch (chỉ dùng cho GUI/chơi tay, xem ghi chú trong state.py) ---
-        self.split_switches = split_switches or []  # list of dict {r,c,target_a,target_b}
+        self.split_switches = split_switches or []
         self.split_mode = False
-        self.cubes = []            # [{'r':.., 'c':..}, {'r':.., 'c':..}] khi split_mode True
+        self.cubes = []
         self.active_cube_index = 0
-        self.just_merged = False   # cờ báo GUI vừa merge xong (để đổi lại hiển thị 1 khối)
+        self.just_merged = False
 
     def get_occupied_cells(self):
         if self.orientation == 'STANDING':
@@ -59,7 +46,6 @@ class BloxorzCore:
         return True
 
     def _apply_switches(self, cells):
-        """Cập nhật self.open_bridges theo switch mà khối vừa chạm/đứng lên."""
         triggered = []
         cell_set = set(cells)
         for sw in self.switches:
@@ -95,34 +81,25 @@ class BloxorzCore:
         self.last_triggered_switches = triggered
 
     def move(self, direction):
-        """Điểm vào duy nhất cho input di chuyển — tự định tuyến theo việc
-        khối đang ở dạng thường (1x1x2) hay đang split (2 cube 1x1x1)."""
         if self.split_mode:
             return self._move_active_cube(direction)
         return self._move_block(direction)
 
     def switch_active_cube(self):
-        """Đổi cube đang điều khiển (phím Space). Không làm gì nếu chưa split."""
         if self.split_mode and len(self.cubes) == 2:
             self.active_cube_index = 1 - self.active_cube_index
 
     def _move_active_cube(self, direction):
-        """Di chuyển 1 cube 1x1x1 đang active, đi 1 ô (không đổi hướng vì
-        cube đối xứng). Cube đơn: có thể kích hoạt soft switch, KHÔNG kích
-        hoạt được heavy switch, và không thể tự thắng màn."""
         dr, dc = {'UP': (-1, 0), 'DOWN': (1, 0), 'LEFT': (0, -1), 'RIGHT': (0, 1)}[direction]
         cube = self.cubes[self.active_cube_index]
         new_r, new_c = cube['r'] + dr, cube['c'] + dc
 
         if not self._is_passable(new_r, new_c):
-            # Cube rơi khỏi bàn cờ -> thua ngay (không có hiệu ứng rơi chậm
-            # riêng cho split, dùng chung cờ game-over của LOSE_FALL)
             cube['r'], cube['c'] = new_r, new_c
             return "LOSE_FALL"
 
         cube['r'], cube['c'] = new_r, new_c
 
-        # Cube đơn chỉ kích hoạt được soft switch (đề bài 2.5)
         for sw in self.switches:
             if sw['kind'] != 'SOFT':
                 continue
@@ -149,8 +126,6 @@ class BloxorzCore:
         return "CONTINUE"
 
     def _try_merge(self):
-        """Nếu 2 cube đang kề nhau (ngang hoặc dọc) thì ghép lại thành khối
-        1x1x2 chuẩn. Trả về True nếu vừa ghép."""
         a, b = self.cubes[0], self.cubes[1]
         if a['r'] == b['r'] and abs(a['c'] - b['c']) == 1:
             left = a if a['c'] < b['c'] else b
@@ -170,8 +145,6 @@ class BloxorzCore:
         return True
 
     def _check_split_trigger(self):
-        """Gọi sau mỗi lần khối (dạng thường) đứng yên ở vị trí mới. Nếu
-        đang ĐỨNG đúng lên 1 split switch thì tách khối."""
         if self.orientation != 'STANDING':
             return False
         for sw in self.split_switches:
@@ -215,12 +188,8 @@ class BloxorzCore:
             elif direction == 'DOWN':
                 self.orientation, self.r, self.c = 'STANDING', r + 2, c
 
-        # Switch được kích hoạt ngay khi khối chạm/đứng lên, TRƯỚC khi xét
-        # rơi hay thắng (vì switch có thể mở cây cầu đang đứng chân lên).
         self._apply_switches(self.get_occupied_cells())
 
-        # Split switch: nếu vừa đứng đúng lên nó thì tách khối ngay, không
-        # xét rơi/thắng cho vị trí cũ nữa (ô split switch không phải void/goal).
         if self._check_split_trigger():
             return "CONTINUE"
 
@@ -241,7 +210,6 @@ class BloxorzCore:
                 self.fall_void_cell = None
             return "LOSE_FALL"
 
-        # Fragile: đứng lên là vỡ
         if self.orientation == 'STANDING' and self.tile_at(self.r, self.c) == FRAGILE:
             self.fall_void_cell = None
             return "LOSE_FALL"
